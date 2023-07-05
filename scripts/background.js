@@ -31,10 +31,23 @@ chrome.action.onClicked.addListener(async (tab) => {
 
         } else if (nextState === "OFF") {
             // Remove the CSS file when the user turns the extension off
-            await chrome.scripting.removeCSS({
-                files: ["focus-mode.css"],
-                target: { tabId: tab.id },
-            });
+            /*   await chrome.scripting.removeCSS({
+                   files: ["focus-mode.css"],
+                   target: { tabId: tab.id },
+               });
+   
+               await chrome.tabs.reload(
+                   tab.id
+               );*/
+
+            await Promise.all(
+                [chrome.scripting.removeCSS({
+                    files: ["focus-mode.css"],
+                    target: { tabId: tab.id },
+                }), chrome.tabs.reload(tab.id)]);
         }
     }
 });
+
+
+
