@@ -16,21 +16,6 @@ chrome.action.onClicked.addListener(async (tab) => {
     });
 });
 
-// WHY this didn't work?
-// chrome.runtime.onMessage.addListener(
-//     async (request, sender, sendResponse) => {
-//         console.log(sender.tab ?
-//             "from a content script: " + sender.tab.url :
-//             "from the extension", request, sender, sendResponse);
-
-//         if (request?.status === "badge") {
-//             const currentState = await chrome.action.getBadgeText({});
-//             sendResponse({ state: currentState });
-//         }
-//         return true;
-//     }
-// );
-
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     (async function () {
         console.log(sender.tab ?
