@@ -1,14 +1,23 @@
 let state = 'OFF';
 
+console.log("CONTENT SCRIPT");
+
+// Ask bg for badge status text, 
 (async () => {
     const response = await chrome.runtime.sendMessage({ status: "badge" });
     state = response?.state;
     if (state === 'ON') {
+
+        // Aside links to shorts
+        removeAllElementsWithChildTitle("ytd-guide-entry-renderer", ".title");
+        removeAllElementsWithChildTitle("ytd-mini-guide-entry-renderer", ".title");
+        // Shorts main sections and small right sections
+        removeAllElementsWithChildTitle("ytd-rich-section-renderer", "span.ytd-rich-shelf-renderer");
+        removeAllElementsWithChildTitle("ytd-reel-shelf-renderer", "span.ytd-reel-shelf-renderer");
+        // Remove SHORTs thumbnails  ytd-rich-item-renderer
+        removeAllElementsWithChildTitle("ytd-rich-item-renderer", "#text");
+
         observer.observe(document, { childList: true, subtree: true });
-        /*
-        removeShortsLinks();
-        removeShortsSections();
-        removeShortsThumbnails();*/
     }
 })();
 
@@ -17,70 +26,35 @@ let observer = new MutationObserver(mutations => {
         for (let mutation of mutations) {
             for (let addedNode of mutation.addedNodes) {
                 if (addedNode.nodeType === Node.ELEMENT_NODE) {
-                    //Icons
-                    if (addedNode.classList?.contains("ytd-mini-guide-entry-renderer")) {
-                        const title = addedNode.querySelector(".title");
-                        if (title?.innerText.toUpperCase().trim() === "SHORTS") {
-                            addedNode.remove();
-                            console.log("+Removed a shorts link");
-                        }
-                    }
-                    // Thumbnails
-                    if (addedNode.classList?.contains("ytd-rich-item-renderer")) {
-                        const title = addedNode.querySelector("#text");
-                        if (title?.innerText.toUpperCase().trim() === "SHORTS") {
-                            addedNode.remove();
-                            console.log("+Removed a short thumbnail");
-
-                        }
-                    }
-                    //Sections
-                    if (addedNode.classList?.contains("ytd-rich-section-renderer")) {
-                        const title = addedNode.querySelector("span.ytd-rich-shelf-renderer");
-                        if (title?.innerText.toUpperCase().trim() === "SHORTS") {
-                            addedNode.remove();
-                            console.log("+Removed a short section");
-                        }
-                    }
-
+                    removeElementWithClassAndChildTitle(addedNode, "ytd-guide-entry-renderer", ".title");
+                    removeElementWithClassAndChildTitle(addedNode, "ytd-mini-guide-entry-renderer", ".title");
+                    removeElementWithClassAndChildTitle(addedNode, "ytd-rich-section-renderer", "span.ytd-rich-shelf-renderer");
+                    removeElementWithClassAndChildTitle(addedNode, "ytd-reel-shelf-renderer", "span.ytd-reel-shelf-renderer");
+                    removeElementWithClassAndChildTitle(addedNode, "ytd-rich-item-renderer", "#text");
                 }
             }
         }
     }
 });
 
-// ASIDE LINK SHORT
-function removeShortsLinks() {
-    const links = document.querySelectorAll("#items a");
-    for (const link of links) {
-        if (link.title.toUpperCase().trim() == "SHORTS") {
-            link.remove();
-            console.log("Removed a shorts link");
-        }
+
+function removeElementWithClassAndChildTitle(element, elementsCssClass, childCssSelector, title) {
+    if (element.classList?.contains(elementsCssClass)) {
+        removeElementdWithChildTitle(element, childCssSelector, title);
     }
 }
 
-function removeShortsSections() {
-
-    // HOME SECTION SHORTs
-    const sections = document.querySelectorAll(".ytd-rich-section-renderer");
-    for (const section of sections) {
-        const title = section.querySelector("#title");
-        if (title.innerText.toUpperCase().trim() == "SHORTS") {
-            section.remove();
-            console.log("Removed a short section");
-        }
+function removeAllElementsWithChildTitle(elementsCssClass, childCssSelector, title) {
+    const elements = document.querySelectorAll('.' + elementsCssClass);
+    for (const element of elements) {
+        removeElementdWithChildTitle(element, childCssSelector, title);
     }
 }
 
-function removeShortsThumbnails() {
-    // Remove SHORTs thumbnails  ytd-rich-item-renderer
-    const thumbnails = document.querySelectorAll(".ytd-rich-item-renderer");
-    for (const thumbnail of thumbnails) {
-        const title = thumbnail.querySelector("#text");
-        if (title.innerText.toUpperCase().trim() == "SHORTS") {
-            thumbnail.remove();
-            console.log("Removed a short thumbnail");
-        }
+function removeElementdWithChildTitle(element, childCssSelector, title = "SHORTS") {
+    const titleElement = element.querySelector(childCssSelector);
+    if (titleElement?.innerText.toUpperCase().trim() === title) {
+        element.remove();
+        console.log("Element:", element.classList, " removed");
     }
 }
