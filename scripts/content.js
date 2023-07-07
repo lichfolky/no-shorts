@@ -1,4 +1,3 @@
-let state = 'OFF';
 
 const elementsToDelete = [
     // Aside links to shorts
@@ -6,36 +5,54 @@ const elementsToDelete = [
     ["ytd-mini-guide-entry-renderer", "span"],
     // Shorts main sections and small right sections
     ["ytd-rich-section-renderer", "span"],
+    ["ytd-rich-shelf-renderer", "span"],
     ["ytd-reel-shelf-renderer"],
     // Shorts thumbnails
     ["ytd-rich-item-renderer", "span"]
 ];
 
 let observer = new MutationObserver(mutations => {
-    if (state === 'ON') {
-        for (let mutation of mutations) {
-            for (let addedNode of mutation.addedNodes) {
-                if (addedNode.nodeType === Node.ELEMENT_NODE) {
-                    elementsToDelete.map(([elementsCssClass, childTag]) =>
-                        removeElementWithClassAndChildTitle(addedNode, elementsCssClass, childTag)
-                    );
-                }
+    for (let mutation of mutations) {
+        for (let addedNode of mutation.addedNodes) {
+            if (addedNode.nodeType === Node.ELEMENT_NODE) {
+                elementsToDelete.map(([elementsCssClass, childTag]) =>
+                    removeElementWithClassAndChildTitle(addedNode, elementsCssClass, childTag)
+                );
             }
         }
     }
+
 });
 
-// Ask bg for badge status text, 
-(async () => {
-    const response = await chrome.runtime.sendMessage({ status: "badge" });
-    state = response?.state;
-    if (state === 'ON') {
-        elementsToDelete.map(([elementsCssClass, childTag]) =>
-            removeAllElementsWithChildTitle(elementsCssClass, childTag)
-        );
-        observer.observe(document, { childList: true, subtree: true });
+chrome.storage.local.get(["status"]).then((result) => {
+    if (result?.status === 'ON') {
+        removeShorts();
+    } else {
+        addShorts();
     }
-})();
+});
+
+function removeShorts() {
+    elementsToDelete.map(([elementsCssClass, childTag]) =>
+        removeAllElementsWithChildTitle(elementsCssClass, childTag)
+    );
+    observer.observe(document, { childList: true, subtree: true });
+}
+
+function addShorts() {
+    observer.disconnect();
+}
+
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
+        if (key === "status" && oldValue === 'OFF' && newValue === 'ON') {
+            removeShorts();
+        }
+        if (key === "status" && oldValue === 'ON' && newValue === 'OFF') {
+            addShorts();
+        }
+    }
+});
 
 function removeElementWithClassAndChildTitle(element, elementsCssClass, childTag, title) {
     if (element.classList?.contains(elementsCssClass)) {
@@ -43,8 +60,8 @@ function removeElementWithClassAndChildTitle(element, elementsCssClass, childTag
     }
 }
 
-function removeAllElementsWithChildTitle(elementsCssClass, childTag, title) {
-    const elements = document.querySelectorAll(`.${elementsCssClass}`);
+function removeAllElementsWithChildTitle(elementsTag, childTag, title) {
+    const elements = document.getElementsByTagName(elementsTag);
     for (const element of elements) {
         removeElementdWithchildTag(element, childTag, title);
     }
@@ -56,12 +73,10 @@ function removeElementdWithchildTag(element, childTag, title = "SHORTS") {
         for (const textElement of textElements) {
             if (textElement?.innerText.toUpperCase().trim() === title) {
                 element.remove();
-                console.log("Element:", element.classList, " removed");
                 return;
             }
         }
     } else {
         element.remove();
-        console.log("Element:", element.classList, " removed");
     }
 }

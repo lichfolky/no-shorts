@@ -2,31 +2,20 @@ chrome.runtime.onInstalled.addListener(() => {
     chrome.action.setBadgeText({
         text: "ON",
     });
+    chrome.storage.local.set({ status: "ON" });
 });
 
-const youtube = 'https://www.youtube.com/';
 chrome.action.onClicked.addListener(async (tab) => {
     // Retrieve the action badge to check if the extension is 'ON' or 'OFF'
-    const prevState = await chrome.action.getBadgeText({});
+    const prevState = await chrome.storage.local.get(["status"]);
     // Next state will always be the opposite
-    const nextState = prevState === 'ON' ? 'OFF' : 'ON';
+    const nextState = prevState.status === 'ON' ? 'OFF' : 'ON';
     // Set the action badge to the next state
     await chrome.action.setBadgeText({
         text: nextState,
     });
-});
-
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    (async function () {
-        console.log(sender.tab ?
-            "Msg from a content script: " + sender.tab.url :
-            "Msg from the extension");
-
-        if (request?.status === "badge") {
-            const currentState = await chrome.action.getBadgeText({});
-            sendResponse({ state: currentState });
-        }
-    })();
-    // return true to indicate you want to send a response asynchronously
-    return true;
+    await chrome.storage.local.set({ status: nextState });
+    if (nextState == "OFF") {
+        chrome.tabs.reload();
+    }
 });
