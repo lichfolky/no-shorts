@@ -33,3 +33,5 @@ chrome.runtime.onMessage.addListener(
 ```
 
 https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver
+
+https://stackoverflow.com/questions/39301819/how-to-change-the-html-content-as-its-loading-on-the-page/39334319#39334319

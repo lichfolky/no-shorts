@@ -1,59 +1,66 @@
 let state = 'OFF';
 
-console.log("CONTENT SCRIPT");
-
-// Ask bg for badge status text, 
-(async () => {
-    const response = await chrome.runtime.sendMessage({ status: "badge" });
-    state = response?.state;
-    if (state === 'ON') {
-
-        // Aside links to shorts
-        removeAllElementsWithChildTitle("ytd-guide-entry-renderer", ".title");
-        removeAllElementsWithChildTitle("ytd-mini-guide-entry-renderer", ".title");
-        // Shorts main sections and small right sections
-        removeAllElementsWithChildTitle("ytd-rich-section-renderer", "span.ytd-rich-shelf-renderer");
-        removeAllElementsWithChildTitle("ytd-reel-shelf-renderer", "span.ytd-reel-shelf-renderer");
-        // Remove SHORTs thumbnails  ytd-rich-item-renderer
-        removeAllElementsWithChildTitle("ytd-rich-item-renderer", "#text");
-
-        observer.observe(document, { childList: true, subtree: true });
-    }
-})();
+const elementsToDelete = [
+    // Aside links to shorts
+    ["ytd-guide-entry-renderer", "span"],
+    ["ytd-mini-guide-entry-renderer", "span"],
+    // Shorts main sections and small right sections
+    ["ytd-rich-section-renderer", "span"],
+    ["ytd-reel-shelf-renderer"],
+    // Shorts thumbnails
+    ["ytd-rich-item-renderer", "span"]
+];
 
 let observer = new MutationObserver(mutations => {
     if (state === 'ON') {
         for (let mutation of mutations) {
             for (let addedNode of mutation.addedNodes) {
                 if (addedNode.nodeType === Node.ELEMENT_NODE) {
-                    removeElementWithClassAndChildTitle(addedNode, "ytd-guide-entry-renderer", ".title");
-                    removeElementWithClassAndChildTitle(addedNode, "ytd-mini-guide-entry-renderer", ".title");
-                    removeElementWithClassAndChildTitle(addedNode, "ytd-rich-section-renderer", "span.ytd-rich-shelf-renderer");
-                    removeElementWithClassAndChildTitle(addedNode, "ytd-reel-shelf-renderer", "span.ytd-reel-shelf-renderer");
-                    removeElementWithClassAndChildTitle(addedNode, "ytd-rich-item-renderer", "#text");
+                    elementsToDelete.map(([elementsCssClass, childTag]) =>
+                        removeElementWithClassAndChildTitle(addedNode, elementsCssClass, childTag)
+                    );
                 }
             }
         }
     }
 });
 
+// Ask bg for badge status text, 
+(async () => {
+    const response = await chrome.runtime.sendMessage({ status: "badge" });
+    state = response?.state;
+    if (state === 'ON') {
+        elementsToDelete.map(([elementsCssClass, childTag]) =>
+            removeAllElementsWithChildTitle(elementsCssClass, childTag)
+        );
+        observer.observe(document, { childList: true, subtree: true });
+    }
+})();
 
-function removeElementWithClassAndChildTitle(element, elementsCssClass, childCssSelector, title) {
+function removeElementWithClassAndChildTitle(element, elementsCssClass, childTag, title) {
     if (element.classList?.contains(elementsCssClass)) {
-        removeElementdWithChildTitle(element, childCssSelector, title);
+        removeElementdWithchildTag(element, childTag, title);
     }
 }
 
-function removeAllElementsWithChildTitle(elementsCssClass, childCssSelector, title) {
-    const elements = document.querySelectorAll('.' + elementsCssClass);
+function removeAllElementsWithChildTitle(elementsCssClass, childTag, title) {
+    const elements = document.querySelectorAll(`.${elementsCssClass}`);
     for (const element of elements) {
-        removeElementdWithChildTitle(element, childCssSelector, title);
+        removeElementdWithchildTag(element, childTag, title);
     }
 }
 
-function removeElementdWithChildTitle(element, childCssSelector, title = "SHORTS") {
-    const titleElement = element.querySelector(childCssSelector);
-    if (titleElement?.innerText.toUpperCase().trim() === title) {
+function removeElementdWithchildTag(element, childTag, title = "SHORTS") {
+    if (childTag) {
+        const textElements = element.getElementsByTagName(childTag);
+        for (const textElement of textElements) {
+            if (textElement?.innerText.toUpperCase().trim() === title) {
+                element.remove();
+                console.log("Element:", element.classList, " removed");
+                return;
+            }
+        }
+    } else {
         element.remove();
         console.log("Element:", element.classList, " removed");
     }
