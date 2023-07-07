@@ -1,4 +1,3 @@
-
 const elementsToDelete = [
     // Aside links to shorts
     ["ytd-guide-entry-renderer", "span"],
@@ -11,62 +10,65 @@ const elementsToDelete = [
     ["ytd-rich-item-renderer", "span"]
 ];
 
+// Define the observer for page changes
 let observer = new MutationObserver(mutations => {
     for (let mutation of mutations) {
-        for (let addedNode of mutation.addedNodes) {
-            if (addedNode.nodeType === Node.ELEMENT_NODE) {
-                elementsToDelete.map(([elementsCssClass, childTag]) =>
-                    removeElementWithClassAndChildTitle(addedNode, elementsCssClass, childTag)
-                );
+        if (mutation.type === "childList") {
+            for (let addedNode of mutation.addedNodes) {
+                if (addedNode.nodeType === Node.ELEMENT_NODE) {
+                    for (const [elementsCssClass, childTag] of elementsToDelete) {
+                        if (addedNode.classList?.contains(elementsCssClass)) {
+                            removeElementdWithchildTag(addedNode, childTag);
+                        }
+                    }
+                }
             }
         }
     }
-
 });
 
+// Run a cleanup on launch (is this needed?)
 chrome.storage.local.get(["status"]).then((result) => {
-    if (result?.status === 'ON') {
-        removeShorts();
-    } else {
-        addShorts();
-    }
+    refresh(result?.status);
 });
 
-function removeShorts() {
-    elementsToDelete.map(([elementsCssClass, childTag]) =>
-        removeAllElementsWithChildTitle(elementsCssClass, childTag)
-    );
-    observer.observe(document, { childList: true, subtree: true });
-}
-
-function addShorts() {
-    observer.disconnect();
-}
-
+// Run a cleanup on changed state (is this needed?)
 chrome.storage.onChanged.addListener((changes, namespace) => {
     for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
-        if (key === "status" && oldValue === 'OFF' && newValue === 'ON') {
-            removeShorts();
-        }
-        if (key === "status" && oldValue === 'ON' && newValue === 'OFF') {
-            addShorts();
+        if (key === "status") {
+            refresh(newValue);
         }
     }
 });
 
-function removeElementWithClassAndChildTitle(element, elementsCssClass, childTag, title) {
-    if (element.classList?.contains(elementsCssClass)) {
-        removeElementdWithchildTag(element, childTag, title);
+// Run a cleanup on message received
+chrome.runtime.onMessage.addListener(
+    (request, sender, sendResponse) => {
+        if (request.message === "refresh") {
+            chrome.storage.local.get(["status"]).then((result) => {
+                refresh(result?.status);
+            });
+        }
+    });
+
+// Clean the page from element regarding shorts if state is on
+// Stops to observe if state is off
+function refresh(state) {
+    if (state === 'ON') {
+        for (const [elementsTag, childTag] of elementsToDelete) {
+            const elements = document.getElementsByTagName(elementsTag);
+            for (const element of elements) {
+                removeElementdWithchildTag(element, childTag);
+            }
+        }
+        observer.observe(document, { childList: true, subtree: true });
+    } else {
+        observer.disconnect();
     }
 }
 
-function removeAllElementsWithChildTitle(elementsTag, childTag, title) {
-    const elements = document.getElementsByTagName(elementsTag);
-    for (const element of elements) {
-        removeElementdWithchildTag(element, childTag, title);
-    }
-}
-
+// Removes an element if childtag contains the text title
+// Removes the element if childtag is undefined
 function removeElementdWithchildTag(element, childTag, title = "SHORTS") {
     if (childTag) {
         const textElements = element.getElementsByTagName(childTag);
