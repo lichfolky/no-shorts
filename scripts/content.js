@@ -18,6 +18,7 @@ let observer = new MutationObserver(mutations => {
                 if (addedNode.nodeType === Node.ELEMENT_NODE) {
                     for (const [elementsCssClass, childTag] of elementsToDelete) {
                         if (addedNode.classList?.contains(elementsCssClass)) {
+                            console.log("NS: mutation");
                             removeElementdWithchildTag(addedNode, childTag);
                         }
                     }
@@ -29,32 +30,23 @@ let observer = new MutationObserver(mutations => {
 
 // Run a cleanup on launch (is this needed?)
 chrome.storage.local.get(["status"]).then((result) => {
+    console.log("NS: start ", result?.status);
     refresh(result?.status);
-});
-
-// Run a cleanup on changed state (is this needed?)
-chrome.storage.onChanged.addListener((changes, namespace) => {
-    for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
-        if (key === "status") {
-            refresh(newValue);
-        }
-    }
 });
 
 // Run a cleanup on message received
 chrome.runtime.onMessage.addListener(
     (request, sender, sendResponse) => {
+        console.log("NS: refresh", request);
         if (request.message === "refresh") {
-            chrome.storage.local.get(["status"]).then((result) => {
-                refresh(result?.status);
-            });
+            refresh(request?.status);
         }
     });
 
-// Clean the page from element regarding shorts if state is on
-// Stops to observe if state is off
-function refresh(state) {
-    if (state === 'ON') {
+// Clean the page from element regarding shorts if status is on
+// Stops to observe if status is off
+function refresh(status) {
+    if (status === 'ON') {
         for (const [elementsTag, childTag] of elementsToDelete) {
             const elements = document.getElementsByTagName(elementsTag);
             for (const element of elements) {

@@ -49,3 +49,8 @@ chrome.storage.local.get(["status"]).then((result) => {
 });
 */
 ```
+
+
+https://stackoverflow.com/questions/34077641/how-to-detect-page-navigation-on-youtube-and-modify-its-appearance-seamlessly/34100952#34100952
+
+getEventListeners(document)
